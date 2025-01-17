@@ -1,0 +1,17 @@
+# Core libraries for data manipulation and analysis
+pandas==1.5.3
+numpy==1.24.1
+
+# Machine learning libraries
+scikit-learn==1.2.0
+xgboost==1.7.1
+
+# Visualization libraries
+matplotlib==3.7.0
+seaborn==0.11.3
+
+# Environment management (optional but useful for managing settings)
+python-dotenv==1.0.0
+
+# Testing
+pytest==7.2.2
