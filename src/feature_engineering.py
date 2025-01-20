@@ -78,10 +78,10 @@ def process_features(input_path, output_path):
 
 if __name__ == "__main__":
     # File paths
-    cleaned_train_path = "../outputs/cleaned_train.csv"
-    cleaned_test_path = "../outputs/cleaned_test.csv"
-    engineered_train_path = "../outputs/engineered_train.csv"
-    engineered_test_path = "../outputs/engineered_test.csv"
+    cleaned_train_path = "../processed/cleaned_train.csv"
+    cleaned_test_path = "../processed/cleaned_test.csv"
+    engineered_train_path = "../processed/engineered_train.csv"
+    engineered_test_path = "../processed/engineered_test.csv"
 
     # Process train and test datasets
     process_features(cleaned_train_path, engineered_train_path)
