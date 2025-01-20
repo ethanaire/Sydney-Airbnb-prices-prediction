@@ -1,4 +1,4 @@
-# This script includes functions for loading data, cleaning missing values, engineering features, and saving preprocessed data.
+# This script includes functions for loading data, cleaning missing values and saving preprocessed data.
 
 import pandas as pd
 import os
