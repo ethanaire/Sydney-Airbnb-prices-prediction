@@ -5,13 +5,15 @@ import numpy as np
 import os
 import logging
 from sklearn.model_selection import train_test_split, GridSearchCV
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.linear_model import LinearRegression, Ridge
+from sklearn.svm import SVR
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 import joblib
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
 
 def load_data(file_path):
     """
@@ -58,24 +60,6 @@ def split_data(df, target, test_size=0.2, random_state=42):
     return X_train, X_test, y_train, y_test
 
 
-def train_model(model, X_train, y_train):
-    """
-    Train a machine learning model.
-
-    Parameters:
-        model: The machine learning model to train.
-        X_train (pd.DataFrame): Training features.
-        y_train (pd.Series): Training target.
-
-    Returns:
-        Trained model.
-    """
-    logging.info(f"Training model: {model.__class__.__name__}...")
-    model.fit(X_train, y_train)
-    logging.info("Model training completed.")
-    return model
-
-
 def evaluate_model(model, X_test, y_test):
     """
     Evaluate a machine learning model.
@@ -99,23 +83,32 @@ def evaluate_model(model, X_test, y_test):
     return metrics
 
 
-def save_model(model, output_path):
+def train_with_grid_search(model, param_grid, X_train, y_train, cv=5):
     """
-    Save the trained model to a file.
+    Train a model using GridSearchCV for hyperparameter tuning.
 
     Parameters:
-        model: Trained model.
-        output_path (str): Path to save the model.
+        model: The base model to train.
+        param_grid (dict): Dictionary of hyperparameters to search.
+        X_train (pd.DataFrame): Training features.
+        y_train (pd.Series): Training target.
+        cv (int): Number of cross-validation folds.
+
+    Returns:
+        Best estimator from GridSearchCV.
     """
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    joblib.dump(model, output_path)
-    logging.info(f"Model saved to {output_path}")
+    logging.info(f"Starting GridSearchCV for {model.__class__.__name__}...")
+    grid_search = GridSearchCV(estimator=model, param_grid=param_grid, cv=cv, scoring='r2', verbose=2)
+    grid_search.fit(X_train, y_train)
+    logging.info(f"Best parameters for {model.__class__.__name__}: {grid_search.best_params_}")
+    logging.info(f"Best R2 score for {model.__class__.__name__}: {grid_search.best_score_}")
+    return grid_search.best_estimator_
 
 
 if __name__ == "__main__":
     # File paths
-    engineered_train_path = "../outputs/engineered_train.csv"
-    model_output_path = "../models/airbnb_model.pkl"
+    engineered_train_path = "../processed/engineered_train.csv"
+    model_output_path = "../results/models/"
 
     # Target variable
     target_column = "price"
@@ -129,25 +122,53 @@ if __name__ == "__main__":
     # Split data
     X_train, X_test, y_train, y_test = split_data(df, target=target_column)
 
-    # Train models
-    linear_model = LinearRegression()
-    rf_model = RandomForestRegressor(random_state=42)
+    # Models and hyperparameters
+    models_and_parameters = {
+        "LinearRegression": (LinearRegression(), {}),
+        "Ridge": (Ridge(), {"alpha": [0.1, 1, 10]}),
+        "RandomForestRegressor": (
+            RandomForestRegressor(random_state=42),
+            {"n_estimators": [50, 100, 200], "max_depth": [10, 20, None]},
+        ),
+        "GradientBoostingRegressor": (
+            GradientBoostingRegressor(random_state=42),
+            {"n_estimators": [50, 100], "learning_rate": [0.01, 0.1], "max_depth": [3, 5]},
+        ),
+        "SVR": (
+            SVR(),
+            {"C": [0.1, 1, 10], "kernel": ["linear", "rbf"]},
+        ),
+    }
 
-    trained_linear_model = train_model(linear_model, X_train, y_train)
-    trained_rf_model = train_model(rf_model, X_train, y_train)
+    # Train and evaluate models
+    best_model = None
+    best_metrics = None
+    best_model_name = None
 
-    # Evaluate models
-    linear_metrics = evaluate_model(trained_linear_model, X_test, y_test)
-    rf_metrics = evaluate_model(trained_rf_model, X_test, y_test)
+    os.makedirs(model_output_path, exist_ok=True)
 
-    # Select and save the best model
-    if rf_metrics["R2"] > linear_metrics["R2"]:
-        best_model = trained_rf_model
-        logging.info("Random Forest Regressor selected as the best model.")
-    else:
-        best_model = trained_linear_model
-        logging.info("Linear Regression selected as the best model.")
+    for model_name, (model, param_grid) in models_and_parameters.items():
+        logging.info(f"Training {model_name}...")
+        if param_grid:
+            trained_model = train_with_grid_search(model, param_grid, X_train, y_train)
+        else:
+            trained_model = model.fit(X_train, y_train)
 
-    save_model(best_model, model_output_path)
+        metrics = evaluate_model(trained_model, X_test, y_test)
 
+        if not best_metrics or metrics["R2"] > best_metrics["R2"]:
+            best_model = trained_model
+            best_metrics = metrics
+            best_model_name = model_name
 
+        # Save individual model
+        model_path = os.path.join(model_output_path, f"{model_name}_model.pkl")
+        joblib.dump(trained_model, model_path)
+        logging.info(f"{model_name} saved to {model_path}")
+
+    logging.info(f"Best model: {best_model_name} with metrics: {best_metrics}")
+
+    # Save best model
+    best_model_path = os.path.join(model_output_path, "best_model.pkl")
+    joblib.dump(best_model, best_model_path)
+    logging.info(f"Best model saved to {best_model_path}")
