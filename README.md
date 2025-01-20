@@ -1,0 +1,4 @@
+# Sydney Airbnb Prices Prediction
+
+## Forcasting Problem
+When it comes to determining the rental price of each Airbnb, both the host and the customer bear significant and difficult responsibilities. For the host, it is possible for them to set a reasonable price without sacrificing the amount of profit they can earn. Besides, it is essential for the customers to understand the significant factors influencing the price, and look for places that provide comparable prices. The objective of this project is to forecast Airbnb listing prices in Sydney based on the listed properties characteristics. In order to predict rental price, several machine learning models including linear regression, random forest and other models will be adopted with the availability of Scikit-learn module library in Python.
