@@ -8,6 +8,6 @@ To determine the rental price of one specific Airbnb, both the host and the cust
 
 The main objective of this project is to predict Airbnb listing prices in Sydney based on their property characteristics. Specifically, several machine learning models including linear regression, random forest and other models will be adopted with the availability of Scikit-learn module library in Python after cleaning the given 2 datasets.
 
-## Evaluation Criteria
+## Evaluation Criteria:
 
 As this forecasting problem directly relates to the supervised regression topic, quality indicators such as Mean Squared Error (MSE), R-squared (R^2) and Cross-Validation Score are applied to compare the performance of all possible models. Specifically, the model with the smallest mean squared error will be performed on the test dataset to predict the corresponding prices.
