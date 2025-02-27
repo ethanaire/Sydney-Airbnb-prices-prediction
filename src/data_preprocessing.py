@@ -1,6 +1,11 @@
 # This script includes functions for loading data, cleaning missing values and saving preprocessed data.
 
 import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+import ast
+from math import radians, sin, cos, sqrt, atan2
 import os
 import logging
 
@@ -31,6 +36,15 @@ def load_data(file_path, parse_dates=None):
         logging.error(f"Error loading data: {e}")
         return None
 
+# Haversine formula to calculate distance in km
+def haversine(lat1, lon1, lat2, lon2):
+    R = 6371  # Radius of Earth in km
+    lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])  # Convert degrees to radians
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+    c = 2 * atan2(sqrt(a), sqrt(1-a))
+    return R * c
 
 def clean_data(df):
     """
@@ -57,6 +71,26 @@ def clean_data(df):
     percent_cols = ['host_response_rate', 'host_acceptance_rate']
     for col in percent_cols:
             df[col] = df[col].str.rstrip("%").astype(float) / 100
+
+    # Clean price column for the train dataset
+    if 'price' in df.columns: 
+        df['price'] = df['price'].replace({"\$": "", ",": ""}, regex=True).astype(float)
+
+    # Define reference location (e.g., Sydney city center)
+    CITY_CENTER_LAT = -33.8688
+    CITY_CENTER_LON = 151.2093
+
+    # Add new distance_to_city_center feature
+    df['distance_to_city_center'] = df.apply(
+        lambda row: haversine(row['latitude'], row['longitude'], CITY_CENTER_LAT, CITY_CENTER_LON), axis=1)
+    
+    # Add new review_duration feature
+    df['review_duration'] = (df["last_review"] - df["first_review"]).dt.days
+
+    # Drop original columns after creating new feature
+    df.drop(columns=['latitude', 'longitude', 'first_review', 'last_review'], inplace=True)
+
+
 
     # Handle missing values
     missing_threshold = 0.3  # Drop columns with >30% missing values
