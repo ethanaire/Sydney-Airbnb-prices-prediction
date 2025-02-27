@@ -44,6 +44,20 @@ def clean_data(df):
     """
     logging.info("Cleaning data...")
 
+    # Drop non-essential columns
+    drop_cols = ["ID", "name", "description", "neighborhood_overview", "host_about", "license"]
+    df.drop(columns=drop_cols, inplace=True)
+
+    # Convert date columns to datetime
+    date_cols = ["host_since", "first_review", "last_review"]
+    for col in date_cols:
+        df[col] = pd.to_datetime(df[col])
+
+    # Remove unwanted characters and transform datatype 
+    percent_cols = ['host_response_rate', 'host_acceptance_rate']
+    for col in percent_cols:
+            df[col] = df[col].str.rstrip("%").astype(float) / 100
+
     # Handle missing values
     missing_threshold = 0.3  # Drop columns with >30% missing values
     df = df.dropna(thresh=len(df) * (1 - missing_threshold), axis=1)
@@ -85,10 +99,10 @@ def preprocess_data(input_path, output_path, parse_dates):
 
 if __name__ == "__main__":
     # File paths
-    train_path = "../data/train.csv"
-    test_path = "../data/test.csv"
-    cleaned_train_path = "../processed/cleaned_train.csv"
-    cleaned_test_path = "../processed/cleaned_test.csv"
+    train_path = "C:/Users/haiho/GITHUB/Sydney-Airbnb-prices-prediction/data/raw/train.csv"
+    test_path = "C:/Users/haiho/GITHUB/Sydney-Airbnb-prices-prediction/data/raw/test.csv"
+    cleaned_train_path = "C:/Users/haiho/GITHUB/Sydney-Airbnb-prices-prediction/data/processed/processed_train.csv"
+    cleaned_test_path = "C:/Users/haiho/GITHUB/Sydney-Airbnb-prices-prediction/data/processed/processed_test.csv"
 
     # Columns to parse as dates
     date_columns = ["host_since", "first_review", "last_review"]
