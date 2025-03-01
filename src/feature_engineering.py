@@ -47,55 +47,34 @@ def engineer_train_features(df):
     # Final list of selected features (intersection of correlation and mutual information)
     final_selected_features = list(set(selected_features_corr) & set(selected_features_mi))
 
+    # Drop weak features from the training DataFrame
+    df_train_selected = df[final_selected_features + ["price"]]
+
     logging.info("Train data feature engineering completed.")
-    return df
+    return df_train_selected, final_selected_features
 
 
-def engineer_test_features(df):
+def engineer_test_features(df, selected_features):
     """
     Engineer new features for analysis and modeling.
 
     Parameters:
-        df (pd.DataFrame): DataFrame for feature engineering.
+        df (pd.DataFrame): Test dataframe for feature engineering.
+        selected_features (list): List of features selected from training data.
 
     Returns:
-        pd.DataFrame: DataFrame with new features.
+        pd.DataFrame: Test dataframe with the same selected features as training.
     """
-    logging.info("Starting feature engineering...")
+    logging.info("Starting test feature engineering...")
 
-    # Exclude object features
-    df = df.select_dtypes(exclude=['object'])
+    # Ensure price_per_bedroom is excluded if it exists
+    selected_features = [feature for feature in selected_features if feature != "price_per_bedroom"]
 
-    # Conduct Correlation Analysis
-    correlation_matrix = df.corr()
-    price_correlations = correlation_matrix["price"].sort_values(ascending=False)
-
+    # Retain only the selected features
+    df_test_selected = df[selected_features]
+    
     logging.info("Test data feature engineering completed.")
-    return df
-
-
-def process_features(input_path, output_path):
-    """
-    Load cleaned data, engineer features, and save the result.
-
-    Parameters:
-        input_path (str): Path to the cleaned input dataset.
-        output_path (str): Path to save the feature-engineered dataset.
-    """
-    if not os.path.exists(input_path):
-        logging.error(f"Input file not found: {input_path}")
-        return
-
-    logging.info(f"Loading cleaned data from {input_path}...")
-    df = pd.read_csv(input_path)
-
-    # Engineer features
-    df = engineer_features(df)
-
-    # Save the dataset with engineered features
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    df.to_csv(output_path, index=False)
-    logging.info(f"Feature-engineered data saved to {output_path}")
+    return df_test_selected
 
 
 if __name__ == "__main__":
@@ -105,8 +84,14 @@ if __name__ == "__main__":
     engineered_train_path = "C:/Users/haiho/GITHUB/Sydney-Airbnb-prices-prediction/data/processed/feature_engineered_train.csv"
     engineered_test_path = "C:/Users/haiho/GITHUB/Sydney-Airbnb-prices-prediction/data/processed/feature_engineered_test.csv"
 
-    # Process train and test datasets
-    process_features(cleaned_train_path, engineered_train_path)
-    process_features(cleaned_test_path, engineered_test_path)
+    # Process train dataset
+    df_train = pd.read_csv(cleaned_train_path)
+    df_train_selected, final_selected_features = engineer_train_features(df_train)
+    df_train_selected.to_csv(engineered_train_path, index=False)
+    
+    # Process test dataset
+    df_test = pd.read_csv(cleaned_test_path)
+    df_test_selected = engineer_test_features(df_test, final_selected_features)
+    df_test_selected.to_csv(engineered_test_path, index=False)
 
 
