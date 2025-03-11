@@ -7,7 +7,8 @@ import logging
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.linear_model import LinearRegression, Ridge
-from sklearn.svm import SVR
+from sklearn.tree import DecisionTreeRegressor
+import xgboost as xgb
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 import joblib
 
@@ -39,7 +40,7 @@ def load_data(file_path):
         return None
 
 
-def split_data(df, target, test_size=0.2, random_state=42):
+def split_data(df, target, log_target, test_size=0.2, random_state=42):
     """
     Split data into train and test sets.
 
@@ -53,7 +54,7 @@ def split_data(df, target, test_size=0.2, random_state=42):
         Tuple: X_train, X_test, y_train, y_test
     """
     logging.info("Splitting data into train and test sets...")
-    X = df.drop(columns=[target])
+    X = df.drop(columns=[target, log_target])
     y = df[target]
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
     logging.info(f"Train shape: {X_train.shape}, Test shape: {X_test.shape}")
@@ -98,7 +99,7 @@ def train_with_grid_search(model, param_grid, X_train, y_train, cv=5):
         Best estimator from GridSearchCV.
     """
     logging.info(f"Starting GridSearchCV for {model.__class__.__name__}...")
-    grid_search = GridSearchCV(estimator=model, param_grid=param_grid, cv=cv, scoring='r2', verbose=2)
+    grid_search = GridSearchCV(estimator=model, param_grid=param_grid, cv=cv, scoring='r2', n_jobs=-1, verbose=1)
     grid_search.fit(X_train, y_train)
     logging.info(f"Best parameters for {model.__class__.__name__}: {grid_search.best_params_}")
     logging.info(f"Best R2 score for {model.__class__.__name__}: {grid_search.best_score_}")
@@ -107,36 +108,42 @@ def train_with_grid_search(model, param_grid, X_train, y_train, cv=5):
 
 if __name__ == "__main__":
     # File paths
-    engineered_train_path = "../processed/engineered_train.csv"
-    model_output_path = "../results/models/"
+    engineered_train_path = "C:/Users/haiho/GITHUB/Sydney-Airbnb-prices-prediction/data/processed/feature_engineered_train.csv"
+    model_output_path = "C:/Users/haiho/GITHUB/Sydney-Airbnb-prices-prediction/results/"
 
     # Target variable
     target_column = "price"
+    log_target_cloumn = "log_price"
 
     # Load data
     df = load_data(engineered_train_path)
     if df is None:
         logging.error("Data loading failed. Model training aborted.")
         exit()
+    
+    # Log-transforming the price to stabilize variance
+    df["log_price"] = np.log1p(df["price"])
 
     # Split data
-    X_train, X_test, y_train, y_test = split_data(df, target=target_column)
+    X_train, X_test, y_train, y_test = split_data(df, target=target_column, log_target=log_target_cloumn)
 
     # Models and hyperparameters
     models_and_parameters = {
         "LinearRegression": (LinearRegression(), {}),
-        "Ridge": (Ridge(), {"alpha": [0.1, 1, 10]}),
+        "Decision Tree": (
+            DecisionTreeRegressor(random_state=42), {}
+        ),
         "RandomForestRegressor": (
             RandomForestRegressor(random_state=42),
-            {"n_estimators": [50, 100, 200], "max_depth": [10, 20, None]},
+            {"n_estimators": [100, 300, 500], "max_depth": [10, 20, None], "min_samples_split": [2, 5, 10]},
         ),
         "GradientBoostingRegressor": (
             GradientBoostingRegressor(random_state=42),
-            {"n_estimators": [50, 100], "learning_rate": [0.01, 0.1], "max_depth": [3, 5]},
+            {"n_estimators": [100, 300, 500], "learning_rate": [0.01, 0.1, 0.2], "max_depth": [3, 5, 7]},
         ),
-        "SVR": (
-            SVR(),
-            {"C": [0.1, 1, 10], "kernel": ["linear", "rbf"]},
+        "XGBoost": (
+            xgb.XGBRegressor(random_state=42),
+            {"n_estimators": [100, 300, 500], "learning_rate": [0.01, 0.1, 0.2], "max_depth": [3, 6, 9]},
         ),
     }
 
