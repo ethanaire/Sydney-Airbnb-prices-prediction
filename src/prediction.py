@@ -8,6 +8,7 @@ import joblib
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 import matplotlib.pyplot as plt
 import seaborn as sns
+from pathlib import Path
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -60,7 +61,7 @@ def load_data(file_path):
         return None
 
 
-def evaluate_model(model, X_test, y_test):
+def produce_prediction(model, file_path):
     """
     Evaluate the trained model on the test data.
 
@@ -72,64 +73,22 @@ def evaluate_model(model, X_test, y_test):
     Returns:
         dict: Evaluation metrics and predictions.
     """
+    logging.info(f"Loading data from {file_path}...")
+    df_test = pd.read_csv(file_path)
+
     logging.info("Evaluating model...")
-    predictions = model.predict(X_test)
+    predictions = model.predict(df_test)
 
-    # Metrics
-    mae = mean_absolute_error(y_test, predictions)
-    mse = mean_squared_error(y_test, predictions)
-    rmse = np.sqrt(mse)
-    r2 = r2_score(y_test, predictions)
-
-    metrics = {"MAE": mae, "MSE": mse, "RMSE": rmse, "R2": r2}
-    logging.info(f"Evaluation Metrics: {metrics}")
-
-    return metrics, predictions
-
-
-def plot_results(y_test, predictions, output_path):
-    """
-    Generate evaluation plots and save them.
-
-    Parameters:
-        y_test (pd.Series): Actual target values.
-        predictions (np.ndarray): Predicted target values.
-        output_path (str): Path to save the plot.
-    """
-    logging.info("Generating evaluation plots...")
-
-    # Scatter plot
-    plt.figure(figsize=(8, 8))
-    sns.scatterplot(x=y_test, y=predictions, alpha=0.7)
-    plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], color="red", linestyle="--", lw=2)
-    plt.title("Actual vs Predicted Prices")
-    plt.xlabel("Actual Price")
-    plt.ylabel("Predicted Price")
-    plt.grid(True)
-    plt.savefig(os.path.join(output_path, "actual_vs_predicted.png"))
-    logging.info(f"Scatter plot saved to {output_path}")
-
-    # Residual plot
-    residuals = y_test - predictions
-    plt.figure(figsize=(8, 6))
-    sns.histplot(residuals, kde=True, bins=30)
-    plt.title("Residual Distribution")
-    plt.xlabel("Residual")
-    plt.ylabel("Frequency")
-    plt.grid(True)
-    plt.savefig(os.path.join(output_path, "residual_distribution.png"))
-    logging.info(f"Residual plot saved to {output_path}")
+    return predictions
 
 
 if __name__ == "__main__":
     # File paths
-    test_data_path = "../processed/engineered_test.csv"
-    model_path = "../results/models/airbnb_model.pkl"
-    evaluation_output_path = "../results/figures/"
-
-    # Target variable
-    target_column = "price"
-
+    test_data_path = "C:/Users/haiho/GITHUB/Sydney-Airbnb-prices-prediction/data/processed/feature_engineered_test.csv"
+    model_path = "C:/Users/haiho/GITHUB/Sydney-Airbnb-prices-prediction/results/best_model_Gradient Boosting.pkl"
+    output_path = "C:/Users/haiho/GITHUB/Sydney-Airbnb-prices-prediction/results/"
+    predictions_file_name = "test_predictions.csv"
+    
     # Load test data
     df = load_data(test_data_path)
     if df is None:
@@ -142,20 +101,16 @@ if __name__ == "__main__":
         logging.error("Model loading failed. Evaluation aborted.")
         exit()
 
-    # Split test data
-    X_test = df.drop(columns=[target_column])
-    y_test = df[target_column]
-
-    # Evaluate model
-    metrics, predictions = evaluate_model(model, X_test, y_test)
-
-    # Print metrics
-    logging.info(f"Final Evaluation Metrics: {metrics}")
+    # Apply model on test dataset
+    predictions = produce_prediction(model, test_data_path)
 
     # Create evaluation output directory
-    os.makedirs(evaluation_output_path, exist_ok=True)
+    os.makedirs(output_path, exist_ok=True)
 
-    # Plot and save results
-    plot_results(y_test, predictions, evaluation_output_path)
+    # Save predictions to CSV
+    df["Predicted_Price"] = predictions
+    predictions_file_path = Path(output_path) / predictions_file_name
+    df.to_csv(predictions_file_path, index=False)
+
 
 
