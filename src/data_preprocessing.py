@@ -78,11 +78,16 @@ def clean_data(df):
     # Clean price column for the train dataset
     if 'price' in df.columns: 
         df['price'] = df['price'].replace({"\$": "", ",": ""}, regex=True).astype(float)
-        # Normalizing Price for Different-Sized Properties
-        df["price_per_bedroom"] = df["price"] / (df["bedrooms"] + 1)
-        # Fill mean values for missing values of price_per_bedroom
-        df["price_per_bedroom"] = df["price_per_bedroom"].fillna(df["price_per_bedroom"].mean())
+        # Calculate average price per bedroom for each neighborhood
+        avg_price_per_bedroom = df.groupby("neighbourhood_cleansed")["price"].mean() / df.groupby("neighbourhood_cleansed")["bedrooms"].mean()
+        # Convert to a dictionary for easy lookup
+        avg_price_per_bedroom_dict = avg_price_per_bedroom.to_dict()
 
+    # Map the new price-based features for both datasets 
+    df["avg_price_per_bedroom"] = df["neighbourhood_cleansed"].map(avg_price_per_bedroom_dict)    
+    # Fill missing values with median values
+    df["avg_price_per_bedroom"] = df["avg_price_per_bedroom"].fillna(df["avg_price_per_bedroom"].median())
+    
     # Define reference location (e.g., Sydney city center)
     CITY_CENTER_LAT = -33.8688
     CITY_CENTER_LON = 151.2093
