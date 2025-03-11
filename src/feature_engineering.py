@@ -67,9 +67,6 @@ def engineer_test_features(df, selected_features):
     """
     logging.info("Starting test feature engineering...")
 
-    # Ensure price_per_bedroom is excluded if it exists
-    selected_features = [feature for feature in selected_features if feature != "price_per_bedroom"]
-
     # Retain only the selected features
     df_test_selected = df[selected_features]
     
