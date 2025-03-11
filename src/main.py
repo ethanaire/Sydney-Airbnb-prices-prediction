@@ -10,8 +10,7 @@ scripts = {
     "Data Preprocessing": "src/data_preprocessing.py",
     "Feature Engineering": "src/feature_engineering.py",
     "Model Training": "src/model_training.py",
-    "Model Evaluation": "src/model_evaluation.py",
-    "Visualization": "src/visualization.py",
+    "Prediction": "src/model_evaluation.py"
 }
 
 def run_script(script_name, script_path):
